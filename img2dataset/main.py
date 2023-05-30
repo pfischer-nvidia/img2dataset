@@ -74,7 +74,7 @@ def download(
     resize_mode: str = "border",
     resize_only_if_bigger: bool = False,
     upscale_interpolation: str = "lanczos",
-    downscale_interpolation: str = "area",
+    downscale_interpolation: str = "lanczos",
     encode_quality: int = 95,
     encode_format: str = "jpg",
     skip_reencode: bool = False,
@@ -107,7 +107,7 @@ def download(
 ):
     """Download is the main entry point of img2dataset, it uses multiple processes and download multiple files"""
     if disallowed_header_directives is None:
-        disallowed_header_directives = ["noai", "noimageai", "noindex", "noimageindex"]
+        disallowed_header_directives = None
     if len(disallowed_header_directives) == 0:
         disallowed_header_directives = None
 

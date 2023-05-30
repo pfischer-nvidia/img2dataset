@@ -10,6 +10,7 @@ import json
 import time
 import hashlib
 import pyarrow as pa
+import ssl
 import traceback
 
 import fsspec
@@ -42,8 +43,11 @@ def download_image(row, timeout, user_agent_token, disallowed_header_directives)
     if user_agent_token:
         user_agent_string += f" (compatible; {user_agent_token}; +https://github.com/rom1504/img2dataset)"
     try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         request = urllib.request.Request(url, data=None, headers={"User-Agent": user_agent_string})
-        with urllib.request.urlopen(request, timeout=timeout) as r:
+        with urllib.request.urlopen(request, timeout=timeout, context=ctx) as r:
             if disallowed_header_directives and is_disallowed(
                 r.headers,
                 user_agent_token,
