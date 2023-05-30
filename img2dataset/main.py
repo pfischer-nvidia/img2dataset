@@ -106,9 +106,7 @@ def download(
     disallowed_header_directives: Optional[List[str]] = None,
 ):
     """Download is the main entry point of img2dataset, it uses multiple processes and download multiple files"""
-    if disallowed_header_directives is None:
-        disallowed_header_directives = None
-    if len(disallowed_header_directives) == 0:
+    if disallowed_header_directives is None or len(disallowed_header_directives) == 0:
         disallowed_header_directives = None
 
     config_parameters = dict(locals())
