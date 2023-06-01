@@ -2,6 +2,7 @@ import errno
 import http
 import socket
 import sys
+import ssl
 import urllib
 from urllib.error import URLError
 
@@ -17,11 +18,15 @@ resolver.nameservers = [
 
 
 def custom_resolve(host):
-    result = resolver.resolve(host)
-    ips = [ns.to_text() for ns in result]
-    if len(ips) < 1:
-        raise URLError(f"Custom DNS: No addresses found for {host}")
-    return ips[0]
+    try:
+        result = resolver.resolve(host)
+        ips = [ns.to_text() for ns in result]
+        if len(ips) < 1:
+            raise URLError("Custom DNS: No addresses found for host")
+        # print(f"Custom DNS: Resolved {host} to {ips[0]}")
+        return ips[0]
+    except dns.exception.DNSException as e:
+        raise URLError("Custom DNS: Error resolving")
 
 
 class MyHTTPConnection(http.client.HTTPConnection):
@@ -80,20 +85,35 @@ class MyHTTPHandler(urllib.request.HTTPHandler):
 
 
 class MyHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, debuglevel=0, context=None, check_hostname=None):
+        # By default don't check SSL
+        if context is None:
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+        super().__init__(debuglevel, context, check_hostname)
+
     def https_open(self, req):
         return self.do_open(MyHTTPSConnection, req)
 
 
-def install_custom_dns():
-    opener = urllib.request.build_opener(MyHTTPHandler, MyHTTPSHandler)
-    urllib.request.install_opener(opener)
+_opener = urllib.request.build_opener(MyHTTPHandler, MyHTTPSHandler)
+
+
+def get_custom_opener():
+    return _opener
+
+
+def install_custom_opener():
+    urllib.request.install_opener(_opener)
 
 
 if __name__ == "__main__":
     import ssl
     import io
 
-    install_custom_dns()
+    install_custom_opener()
 
     url = "https://www.ssllabs.com"
 

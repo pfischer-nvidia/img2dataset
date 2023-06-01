@@ -17,6 +17,8 @@ import fsspec
 from .logger import CappedCounter
 from .logger import write_stats
 
+from img2dataset.custom_dns import install_custom_opener
+
 
 def is_disallowed(headers, user_agent_token, disallowed_header_directives):
     """Check if HTTP headers contain an X-Robots-Tag directive disallowing usage"""
@@ -43,11 +45,8 @@ def download_image(row, timeout, user_agent_token, disallowed_header_directives)
     if user_agent_token:
         user_agent_string += f" (compatible; {user_agent_token}; +https://github.com/rom1504/img2dataset)"
     try:
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
         request = urllib.request.Request(url, data=None, headers={"User-Agent": user_agent_string})
-        with urllib.request.urlopen(request, timeout=timeout, context=ctx) as r:
+        with urllib.request.urlopen(request, timeout=timeout) as r:
             if disallowed_header_directives and is_disallowed(
                 r.headers,
                 user_agent_token,
@@ -62,7 +61,9 @@ def download_image(row, timeout, user_agent_token, disallowed_header_directives)
         return key, None, str(err)
 
 
-def download_image_with_retry(row, timeout, retries, user_agent_token, disallowed_header_directives):
+def download_image_with_retry(row, timeout, retries, user_agent_token, disallowed_header_directives, use_custom_opener):
+    if use_custom_opener:
+        install_custom_opener()
     for _ in range(retries + 1):
         key, img_stream, err = download_image(row, timeout, user_agent_token, disallowed_header_directives)
         if img_stream is not None:
@@ -101,7 +102,7 @@ class Downloader:
         user_agent_token,
         disallowed_header_directives,
         blurring_bbox_col=None,
-        use_custom_dns=True,
+        use_custom_opener=True,
     ) -> None:
         self.sample_writer_class = sample_writer_class
         self.resizer = resizer
@@ -124,10 +125,7 @@ class Downloader:
             else {directive.strip().lower() for directive in disallowed_header_directives}
         )
         self.blurring_bbox_col = blurring_bbox_col
-
-        if use_custom_dns:
-            from img2dataset.custom_dns import install_custom_dns
-            install_custom_dns()
+        self.use_custom_opener = use_custom_opener
 
     def __call__(
         self,
@@ -217,6 +215,7 @@ class Downloader:
                     retries=self.retries,
                     user_agent_token=self.user_agent_token,
                     disallowed_header_directives=self.disallowed_header_directives,
+                    use_custom_opener=self.use_custom_opener,
                 ),
                 loader,
             ):
