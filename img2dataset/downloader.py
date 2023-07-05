@@ -102,7 +102,7 @@ class Downloader:
         user_agent_token,
         disallowed_header_directives,
         blurring_bbox_col=None,
-        use_custom_opener=True,
+        use_custom_opener=False,
     ) -> None:
         self.sample_writer_class = sample_writer_class
         self.resizer = resizer
